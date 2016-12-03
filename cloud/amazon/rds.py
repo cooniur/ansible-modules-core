@@ -184,7 +184,7 @@ options:
   aws_throttling:
     description:
       - how long before calling AWS API to check resource, in seconds
-    default: 10
+    default: 5
   apply_immediately:
     description:
       - Used only when command=modify.  If enabled, the modifications will be applied as soon as possible rather than waiting for the next preferred maintenance window.
@@ -1057,7 +1057,7 @@ def main():
             subnet            = dict(required=False),
             wait              = dict(type='bool', default=False),
             wait_timeout      = dict(type='int', default=300),
-            api_throttling    = dict(type='int', default=30),
+            api_throttling    = dict(type='int', default=5),
             snapshot          = dict(required=False),
             apply_immediately = dict(type='bool', default=False),
             new_instance_name = dict(required=False),
