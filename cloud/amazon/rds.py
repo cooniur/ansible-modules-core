@@ -185,6 +185,7 @@ options:
     description:
       - how long before calling AWS API to check resource, in seconds
     default: 5
+    version_added: "2.3"
   apply_immediately:
     description:
       - Used only when command=modify.  If enabled, the modifications will be applied as soon as possible rather than waiting for the next preferred maintenance window.
