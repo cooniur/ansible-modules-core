@@ -51,3 +51,5 @@ venv
 Vagrantfile
 .vagrant
 ansible.egg-info/
+# Visual Studio Code
+.vscode

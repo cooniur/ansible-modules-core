@@ -162,7 +162,7 @@ options:
     default: null
   aws_secret_key:
     description:
-      - AWS secret key. If not set then the value of the AWS_SECRET_KEY environment variable is used. 
+      - AWS secret key. If not set then the value of the AWS_SECRET_KEY environment variable is used.
     required: false
     aliases: [ 'ec2_secret_key', 'secret_key' ]
   aws_access_key:
@@ -181,6 +181,10 @@ options:
     description:
       - how long before wait gives up, in seconds
     default: 300
+  aws_throttling:
+    description:
+      - how long before calling AWS API to check resource, in seconds
+    default: 10
   apply_immediately:
     description:
       - Used only when command=modify.  If enabled, the modifications will be applied as soon as possible rather than waiting for the next preferred maintenance window.
@@ -276,7 +280,7 @@ EXAMPLES = '''
     command: reboot
     instance_name: database
     wait: yes
-    
+
 # Restore a Postgres db instance from a snapshot, wait for it to become available again, and
 #  then modify it to add your security group. Also, display the new endpoint.
 #  Note that the "publicly_accessible" option is allowed here just as it is in the AWS CLI
@@ -292,9 +296,9 @@ EXAMPLES = '''
      wait: yes
      wait_timeout: 600
      tags:
-         Name: pg1_test_name_tag 
+         Name: pg1_test_name_tag
   register: rds
-  
+
 - local_action:
      module: rds
      command: modify
@@ -647,8 +651,9 @@ class RDS2Snapshot:
 
 def await_resource(conn, resource, status, module):
     wait_timeout = module.params.get('wait_timeout') + time.time()
+    api_throttling = module.params.get('api_throttling')
     while wait_timeout > time.time() and resource.status != status:
-        time.sleep(5)
+        time.sleep(api_throttling)
         if wait_timeout <= time.time():
             module.fail_json(msg="Timeout waiting for RDS resource %s" % resource.name)
         if module.params.get('command') == 'snapshot':
@@ -808,6 +813,7 @@ def modify_db_instance(module, conn):
     params = validate_parameters(required_vars, valid_vars, module)
     instance_name = module.params.get('instance_name')
     new_instance_name = module.params.get('new_instance_name')
+    api_throttling = module.params.get('api_throttling')
 
     try:
         result = conn.modify_db_instance(instance_name, **params)
@@ -819,7 +825,7 @@ def modify_db_instance(module, conn):
             new_instance = None
             while not new_instance:
                 new_instance = conn.get_db_instance(new_instance_name)
-                time.sleep(5)
+                time.sleep(api_throttling)
 
             # Found instance but it briefly flicks to available
             # before rebooting so let's wait until we see it rebooting
@@ -840,7 +846,7 @@ def promote_db_instance(module, conn):
     valid_vars = ['backup_retention', 'backup_window']
     params = validate_parameters(required_vars, valid_vars, module)
     instance_name = module.params.get('instance_name')
-    
+
     result = conn.get_db_instance(instance_name)
     if not result:
         module.fail_json(msg="DB Instance %s does not exist" % instance_name)
@@ -1051,6 +1057,7 @@ def main():
             subnet            = dict(required=False),
             wait              = dict(type='bool', default=False),
             wait_timeout      = dict(type='int', default=300),
+            api_throttling    = dict(type='int', default=30),
             snapshot          = dict(required=False),
             apply_immediately = dict(type='bool', default=False),
             new_instance_name = dict(required=False),
